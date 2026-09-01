@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -56,6 +57,19 @@ fun AddressBar(
     var inputText by remember(activeTab?.url) { mutableStateOf(activeTab?.url ?: "") }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+
+    // Dismiss keyboard and address bar focus on back button/gesture
+    BackHandler(enabled = isEditing) {
+        isEditing = false
+        focusManager.clearFocus(force = true)
+        inputText = activeTab?.url ?: ""
+    }
+
+    LaunchedEffect(activeTab?.url) {
+        if (!isEditing) {
+            inputText = activeTab?.url ?: ""
+        }
+    }
 
     val profileColor = if (isPrivateMode) Color(0xFF9333EA) else {
         try {
@@ -170,7 +184,7 @@ fun AddressBar(
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                             keyboardActions = KeyboardActions(onGo = {
                                 isEditing = false
-                                focusManager.clearFocus()
+                                focusManager.clearFocus(force = true)
                                 onNavigate(inputText)
                             }),
                             decorationBox = { innerTextField ->
@@ -190,8 +204,12 @@ fun AddressBar(
                                 .focusRequester(focusRequester)
                                 .onFocusChanged { focusState ->
                                     isEditing = focusState.isFocused
-                                    if (focusState.isFocused && inputText.isBlank() && activeTab?.url?.isNotBlank() == true) {
-                                        inputText = activeTab.url
+                                    if (focusState.isFocused) {
+                                        if (inputText.isBlank() && activeTab?.url?.isNotBlank() == true) {
+                                            inputText = activeTab.url
+                                        }
+                                    } else {
+                                        inputText = activeTab?.url ?: ""
                                     }
                                 }
                                 .testTag("address_input")

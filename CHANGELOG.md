@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-09-01
+
+### Fixed
+- **Web Page Light/Dark Theme Alignment**: Fixed issue where web pages rendered in dark mode despite Light theme being selected in browser settings. Synchronized WebView configuration context and algorithmic darkening so web pages accurately receive `@media (prefers-color-scheme: light)`.
+- **Address Bar Focus & Keyboard Dismissal**:
+  - Tapping on blank space on any web page or New Tab Page now instantly clears address bar focus and dismisses the soft keyboard.
+  - Pressing the hardware Back button or performing the Back swipe gesture while editing the address bar now cleanly dismisses the keyboard, clears the cursor/pointer, and resets the input field without navigating away from the page.
+
 ## [1.0.2] - 2026-09-01
 
 ### Changed & Performance

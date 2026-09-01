@@ -1,46 +1,25 @@
 package com.example.ui.components
 
 import android.annotation.SuppressLint
-import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.net.Uri
-import android.net.http.SslError
 import android.os.Build
 import android.os.Message
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.*
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
-import com.example.browser.ActiveTabState
 import com.example.browser.BrowserViewModel
-import com.example.browser.UrlUtils
 import com.example.browser.WebViewAction
 import com.example.privacy.ContentBlocker
 import kotlinx.coroutines.flow.SharedFlow
@@ -48,7 +27,7 @@ import kotlinx.coroutines.flow.SharedFlow
 private const val DESKTOP_USER_AGENT =
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
 
-@SuppressLint("SetJavaScriptEnabled")
+@SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
 @Composable
 fun WebViewContainer(
     tabId: String,
@@ -58,6 +37,7 @@ fun WebViewContainer(
     whitelistedDomains: Set<String>,
     blockThirdPartyCookies: Boolean,
     enableWebDarkMode: Boolean,
+    isDarkTheme: Boolean,
     viewModel: BrowserViewModel,
     actions: SharedFlow<WebViewAction>,
     modifier: Modifier = Modifier
@@ -67,6 +47,8 @@ fun WebViewContainer(
     var defaultUserAgent by remember { mutableStateOf<String?>(null) }
     var customVideoView by remember { mutableStateOf<View?>(null) }
     var customVideoCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
+
+    val effectiveDark = enableWebDarkMode || isDarkTheme
 
     // Handle incoming actions from ViewModel
     LaunchedEffect(tabId) {
@@ -114,7 +96,17 @@ fun WebViewContainer(
     Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         AndroidView(
             factory = { ctx ->
-                WebView(ctx).apply {
+                val targetUiMode = if (effectiveDark) {
+                    Configuration.UI_MODE_NIGHT_YES
+                } else {
+                    Configuration.UI_MODE_NIGHT_NO
+                }
+                val overrideConfig = Configuration(ctx.resources.configuration).apply {
+                    uiMode = targetUiMode or (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv())
+                }
+                val themedContext = ctx.createConfigurationContext(overrideConfig)
+
+                WebView(themedContext).apply {
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
@@ -122,6 +114,14 @@ fun WebViewContainer(
 
                     // Eliminate black flashing on init
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
+
+                    // Touch listener to gain focus away from address bar on tap
+                    setOnTouchListener { v, event ->
+                        if (event.action == MotionEvent.ACTION_DOWN) {
+                            v.requestFocus()
+                        }
+                        false
+                    }
 
                     // Default user agent capture
                     if (defaultUserAgent == null) {
@@ -163,10 +163,16 @@ fun WebViewContainer(
                         cookieManager.setAcceptThirdPartyCookies(this, !blockThirdPartyCookies)
                     }
 
-                    // Dark Mode for Web Content (if supported by AndroidX WebKit)
-                    if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
-                        val forceDark = if (enableWebDarkMode) WebSettingsCompat.FORCE_DARK_ON else WebSettingsCompat.FORCE_DARK_OFF
-                        WebSettingsCompat.setForceDark(settings, forceDark)
+                    // Dark Mode for Web Content (aligned with active browser theme & force-dark setting)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        settings.isAlgorithmicDarkeningAllowed = effectiveDark
+                    } else if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+                        WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, effectiveDark)
+                    } else if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
+                        WebSettingsCompat.setForceDark(
+                            settings,
+                            if (effectiveDark) WebSettingsCompat.FORCE_DARK_ON else WebSettingsCompat.FORCE_DARK_OFF
+                        )
                     }
 
                     // Find in page listener
@@ -193,7 +199,6 @@ fun WebViewContainer(
 
                             if (ContentBlocker.shouldBlock(uri, isAdBlockEnabled, isWhitelisted)) {
                                 ContentBlocker.recordBlockForTab(tabId)
-                                viewModel.onBlockerHit(tabId)
                                 return ContentBlocker.createEmptyResponse()
                             }
                             return super.shouldInterceptRequest(view, request)
@@ -203,41 +208,25 @@ fun WebViewContainer(
                             super.onPageStarted(view, url, favicon)
                             url?.let {
                                 viewModel.onUrlChanged(it)
-                                viewModel.onNavigationStateChanged(view?.canGoBack() == true, view?.canGoForward() == true)
                             }
+                            viewModel.onNavigationStateChanged(
+                                canGoBack = view?.canGoBack() ?: false,
+                                canGoForward = view?.canGoForward() ?: false
+                            )
                         }
 
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
-                            url?.let { viewModel.onUrlChanged(it) }
-                            view?.title?.let { viewModel.onTitleChanged(it) }
-                            viewModel.onNavigationStateChanged(view?.canGoBack() == true, view?.canGoForward() == true)
-                            viewModel.onProgressChanged(100)
-                        }
-
-                        override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
-                            super.doUpdateVisitedHistory(view, url, isReload)
-                            url?.let { viewModel.onUrlChanged(it) }
-                            view?.title?.let { viewModel.onTitleChanged(it) }
-                        }
-
-                        override fun onReceivedSslError(
-                            view: WebView?,
-                            handler: SslErrorHandler?,
-                            error: SslError?
-                        ) {
-                            super.onReceivedSslError(view, handler, error)
-                        }
-
-                        override fun onRenderProcessGone(
-                            view: WebView?,
-                            detail: RenderProcessGoneDetail?
-                        ): Boolean {
-                            view?.let {
-                                val deadUrl = it.url ?: initialUrl
-                                it.loadUrl(deadUrl)
+                            url?.let {
+                                viewModel.onUrlChanged(it)
                             }
-                            return true
+                            view?.title?.let {
+                                viewModel.onTitleChanged(it)
+                            }
+                            viewModel.onNavigationStateChanged(
+                                canGoBack = view?.canGoBack() ?: false,
+                                canGoForward = view?.canGoForward() ?: false
+                            )
                         }
 
                         override fun shouldOverrideUrlLoading(
@@ -245,15 +234,15 @@ fun WebViewContainer(
                             request: WebResourceRequest?
                         ): Boolean {
                             val url = request?.url?.toString() ?: return false
-                            if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("about:") || url.startsWith("data:")) {
+                            if (url.startsWith("http://") || url.startsWith("https://")) {
                                 return false
                             }
-                            return try {
+                            try {
                                 val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
                                 context.startActivity(intent)
-                                true
+                                return true
                             } catch (e: Exception) {
-                                true
+                                return true
                             }
                         }
                     }
@@ -263,23 +252,11 @@ fun WebViewContainer(
                         override fun onProgressChanged(view: WebView?, newProgress: Int) {
                             super.onProgressChanged(view, newProgress)
                             viewModel.onProgressChanged(newProgress)
-                            viewModel.onNavigationStateChanged(view?.canGoBack() == true, view?.canGoForward() == true)
                         }
 
                         override fun onReceivedTitle(view: WebView?, title: String?) {
                             super.onReceivedTitle(view, title)
                             title?.let { viewModel.onTitleChanged(it) }
-                        }
-
-                        override fun onPermissionRequest(request: PermissionRequest?) {
-                            request?.grant(request.resources)
-                        }
-
-                        override fun onGeolocationPermissionsShowPrompt(
-                            origin: String?,
-                            callback: GeolocationPermissions.Callback?
-                        ) {
-                            callback?.invoke(origin, true, false)
                         }
 
                         override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
@@ -319,6 +296,17 @@ fun WebViewContainer(
                 val targetUa = if (isDesktopMode) DESKTOP_USER_AGENT else defaultUserAgent
                 if (webView.settings.userAgentString != targetUa && targetUa != null) {
                     webView.settings.userAgentString = targetUa
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    webView.settings.isAlgorithmicDarkeningAllowed = effectiveDark
+                } else if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+                    WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, effectiveDark)
+                } else if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
+                    WebSettingsCompat.setForceDark(
+                        webView.settings,
+                        if (effectiveDark) WebSettingsCompat.FORCE_DARK_ON else WebSettingsCompat.FORCE_DARK_OFF
+                    )
                 }
             },
             onRelease = { webView ->

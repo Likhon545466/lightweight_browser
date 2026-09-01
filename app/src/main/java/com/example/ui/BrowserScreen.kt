@@ -5,10 +5,15 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.browser.*
 import com.example.ui.components.*
@@ -56,7 +61,14 @@ fun BrowserScreen(
         whitelistedDomains.contains(domain) || whitelistedDomains.contains(domain.removePrefix("www."))
     }
 
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+    val systemInDark = isSystemInDarkTheme()
+    val isDarkTheme = when (themeMode) {
+        AppThemeMode.LIGHT -> false
+        AppThemeMode.DARK, AppThemeMode.AMOLED -> true
+        AppThemeMode.SYSTEM -> systemInDark
+    }
 
     if (activeSheet == ActiveSheet.SETTINGS) {
         BackHandler(enabled = true) {
@@ -150,6 +162,11 @@ fun BrowserScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .background(MaterialTheme.colorScheme.background)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = {
+                            focusManager.clearFocus(force = true)
+                        })
+                    }
             ) {
                 AnimatedContent(
                     targetState = isHome,
@@ -185,6 +202,7 @@ fun BrowserScreen(
                                     whitelistedDomains = whitelistedDomains,
                                     blockThirdPartyCookies = blockThirdPartyCookies,
                                     enableWebDarkMode = enableWebDarkMode,
+                                    isDarkTheme = isDarkTheme,
                                     viewModel = viewModel,
                                     actions = viewModel.webViewActionEvent
                                 )
@@ -295,8 +313,8 @@ fun BrowserScreen(
 
     if (showClearDataDialog) {
         ClearBrowsingDataDialog(
-            onConfirm = { hist, cookies, cache, siteData, dl ->
-                viewModel.executeClearData(hist, cookies, cache, siteData, dl)
+            onConfirm = { history, cookies, cache, siteData, downloads ->
+                viewModel.executeClearData(history, cookies, cache, siteData, downloads)
                 showClearDataDialog = false
             },
             onDismiss = { showClearDataDialog = false }
