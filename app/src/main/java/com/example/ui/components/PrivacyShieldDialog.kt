@@ -35,7 +35,7 @@ fun PrivacyShieldDialog(
     val modalBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val domain = UrlUtils.extractDomain(activeTab?.url ?: "")
     val tabBlockedCount = activeTab?.blockedCount ?: 0
-    val totalBlocked = ContentBlocker.totalBlockedCount.get()
+    val totalBlocked by ContentBlocker.totalBlockedCount.collectAsState()
 
     val isShieldActiveOnCurrentSite = isGlobalBlockerEnabled && !isSiteWhitelisted
 

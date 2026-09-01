@@ -75,6 +75,9 @@ interface HistoryDao {
     @Query("SELECT * FROM history_entries WHERE profileId = :profileId ORDER BY visitedAt DESC LIMIT 200")
     fun getHistoryForProfile(profileId: String): Flow<List<HistoryItem>>
 
+    @Query("SELECT url, title, count(*) as visitCount FROM history_entries WHERE profileId = :profileId GROUP BY url ORDER BY visitCount DESC, visitedAt DESC LIMIT 12")
+    fun getTopVisitedHistory(profileId: String): Flow<List<TopSiteDto>>
+
     @Query("SELECT * FROM history_entries WHERE profileId = :profileId AND (title LIKE '%' || :query || '%' OR url LIKE '%' || :query || '%') ORDER BY visitedAt DESC LIMIT 50")
     fun searchHistory(profileId: String, query: String): Flow<List<HistoryItem>>
 
@@ -89,6 +92,24 @@ interface HistoryDao {
 
     @Query("DELETE FROM history_entries")
     suspend fun deleteAllHistory()
+}
+
+@Dao
+interface ShortcutDao {
+    @Query("SELECT * FROM custom_shortcuts WHERE profileId = :profileId ORDER BY position ASC, createdAt ASC")
+    fun getShortcutsForProfile(profileId: String): Flow<List<CustomShortcut>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertShortcut(shortcut: CustomShortcut)
+
+    @Update
+    suspend fun updateShortcut(shortcut: CustomShortcut)
+
+    @Query("DELETE FROM custom_shortcuts WHERE id = :id")
+    suspend fun deleteShortcutById(id: String)
+
+    @Query("DELETE FROM custom_shortcuts WHERE profileId = :profileId")
+    suspend fun deleteShortcutsForProfile(profileId: String)
 }
 
 @Dao

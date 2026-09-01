@@ -30,7 +30,43 @@ class BrowserRepository(private val database: AppDatabase) {
     fun getDownloads(profileId: String): Flow<List<DownloadItem>> =
         database.downloadDao().getDownloadsForProfile(profileId)
 
+    fun getTopVisitedSites(profileId: String): Flow<List<TopSiteDto>> =
+        database.historyDao().getTopVisitedHistory(profileId)
+
+    fun getCustomShortcuts(profileId: String): Flow<List<CustomShortcut>> =
+        database.shortcutDao().getShortcutsForProfile(profileId)
+
     val exceptions: Flow<List<SiteException>> = database.privacyDao().getAllExceptions()
+
+    suspend fun saveCustomShortcut(profileId: String, title: String, url: String, id: String? = null) = withContext(Dispatchers.IO) {
+        val shortcutId = id ?: ("sc_" + System.currentTimeMillis())
+        database.shortcutDao().insertShortcut(
+            CustomShortcut(
+                id = shortcutId,
+                profileId = profileId,
+                title = title.ifBlank { url },
+                url = url
+            )
+        )
+    }
+
+    suspend fun deleteCustomShortcut(id: String) = withContext(Dispatchers.IO) {
+        database.shortcutDao().deleteShortcutById(id)
+    }
+
+    suspend fun initializeDefaultShortcutsIfNeeded(profileId: String) = withContext(Dispatchers.IO) {
+        // Pre-populate standard useful quick shortcuts if empty
+        val shortcuts = listOf(
+            CustomShortcut("sc_google", profileId, "Google", "https://www.google.com", position = 0),
+            CustomShortcut("sc_youtube", profileId, "YouTube", "https://www.youtube.com", position = 1),
+            CustomShortcut("sc_github", profileId, "GitHub", "https://github.com", position = 2),
+            CustomShortcut("sc_reddit", profileId, "Reddit", "https://www.reddit.com", position = 3),
+            CustomShortcut("sc_wikipedia", profileId, "Wikipedia", "https://www.wikipedia.org", position = 4)
+        )
+        for (sc in shortcuts) {
+            database.shortcutDao().insertShortcut(sc)
+        }
+    }
 
     suspend fun initializeDefaultProfilesIfNeeded() = withContext(Dispatchers.IO) {
         val existing = database.profileDao().getProfileById("default_personal")

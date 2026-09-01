@@ -14,9 +14,10 @@ import com.example.data.model.*
         Bookmark::class,
         HistoryItem::class,
         DownloadItem::class,
-        SiteException::class
+        SiteException::class,
+        CustomShortcut::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -24,6 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tabDao(): TabDao
     abstract fun bookmarkDao(): BookmarkDao
     abstract fun historyDao(): HistoryDao
+    abstract fun shortcutDao(): ShortcutDao
     abstract fun downloadDao(): DownloadDao
     abstract fun privacyDao(): PrivacyDao
 

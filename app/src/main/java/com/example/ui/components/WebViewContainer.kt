@@ -50,44 +50,55 @@ fun WebViewContainer(
 
     val effectiveDark = enableWebDarkMode || isDarkTheme
 
-    // Handle incoming actions from ViewModel
-    LaunchedEffect(tabId) {
-        actions.collect { action ->
+    // Sync URL when initialUrl or webViewRef changes
+    LaunchedEffect(tabId, initialUrl, webViewRef) {
+        if (initialUrl.isNotBlank() && initialUrl != "about:blank") {
             webViewRef?.let { webView ->
-                when (action) {
-                    is WebViewAction.LoadUrl -> {
-                        webView.loadUrl(action.url)
-                    }
-                    is WebViewAction.Reload -> {
-                        webView.reload()
-                    }
-                    is WebViewAction.StopLoading -> {
-                        webView.stopLoading()
-                    }
-                    is WebViewAction.GoBack -> {
-                        if (webView.canGoBack()) webView.goBack()
-                    }
-                    is WebViewAction.GoForward -> {
-                        if (webView.canGoForward()) webView.goForward()
-                    }
-                    is WebViewAction.SetDesktopMode -> {
-                        val ua = if (action.enabled) DESKTOP_USER_AGENT else defaultUserAgent
-                        webView.settings.userAgentString = ua
-                        webView.reload()
-                    }
-                    is WebViewAction.FindAllAsync -> {
-                        if (action.query.isNotBlank()) {
-                            webView.findAllAsync(action.query)
-                        } else {
-                            webView.clearMatches()
-                        }
-                    }
-                    is WebViewAction.FindNext -> {
-                        webView.findNext(action.forward)
-                    }
-                    is WebViewAction.ClearFindMatches -> {
+                val currentUrl = webView.url ?: ""
+                if (currentUrl != initialUrl) {
+                    webView.loadUrl(initialUrl)
+                }
+            }
+        }
+    }
+
+    // Handle incoming actions from ViewModel
+    LaunchedEffect(tabId, webViewRef) {
+        val webView = webViewRef ?: return@LaunchedEffect
+        actions.collect { action ->
+            when (action) {
+                is WebViewAction.LoadUrl -> {
+                    webView.loadUrl(action.url)
+                }
+                is WebViewAction.Reload -> {
+                    webView.reload()
+                }
+                is WebViewAction.StopLoading -> {
+                    webView.stopLoading()
+                }
+                is WebViewAction.GoBack -> {
+                    if (webView.canGoBack()) webView.goBack()
+                }
+                is WebViewAction.GoForward -> {
+                    if (webView.canGoForward()) webView.goForward()
+                }
+                is WebViewAction.SetDesktopMode -> {
+                    val ua = if (action.enabled) DESKTOP_USER_AGENT else defaultUserAgent
+                    webView.settings.userAgentString = ua
+                    webView.reload()
+                }
+                is WebViewAction.FindAllAsync -> {
+                    if (action.query.isNotBlank()) {
+                        webView.findAllAsync(action.query)
+                    } else {
                         webView.clearMatches()
                     }
+                }
+                is WebViewAction.FindNext -> {
+                    webView.findNext(action.forward)
+                }
+                is WebViewAction.ClearFindMatches -> {
+                    webView.clearMatches()
                 }
             }
         }
@@ -285,14 +296,21 @@ fun WebViewContainer(
                         }
                     }
 
+                    webViewRef = this
                     if (initialUrl.isNotBlank() && initialUrl != "about:blank") {
                         loadUrl(initialUrl)
                     }
-                    webViewRef = this
                 }
             },
             update = { webView ->
                 webViewRef = webView
+                if (initialUrl.isNotBlank() && initialUrl != "about:blank") {
+                    val cur = webView.url ?: ""
+                    if (cur.isEmpty() || cur == "about:blank") {
+                        webView.loadUrl(initialUrl)
+                    }
+                }
+
                 val targetUa = if (isDesktopMode) DESKTOP_USER_AGENT else defaultUserAgent
                 if (webView.settings.userAgentString != targetUa && targetUa != null) {
                     webView.settings.userAgentString = targetUa

@@ -34,21 +34,6 @@ class MainActivity : ComponentActivity() {
                 AppThemeMode.SYSTEM -> systemInDark
             }
 
-            DisposableEffect(isDark) {
-                val targetUiMode = if (isDark) {
-                    Configuration.UI_MODE_NIGHT_YES
-                } else {
-                    Configuration.UI_MODE_NIGHT_NO
-                }
-                val config = resources.configuration
-                if ((config.uiMode and Configuration.UI_MODE_NIGHT_MASK) != targetUiMode) {
-                    config.uiMode = targetUiMode or (config.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv())
-                    @Suppress("DEPRECATION")
-                    resources.updateConfiguration(config, resources.displayMetrics)
-                }
-                onDispose { }
-            }
-
             MyApplicationTheme(
                 themeMode = themeMode,
                 useMaterialYou = useMaterialYou

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Browser</string>
+    <string name="app_name">Feather</string>
     <string name="search_or_enter_url">Search or enter URL</string>
     <string name="new_tab">New Tab</string>
     <string name="new_private_tab">New Private Tab</string>

@@ -52,6 +52,8 @@ fun SettingsScreen(
     onHttpsModeChange: (HttpsMode) -> Unit,
     enableWebDarkMode: Boolean,
     onToggleWebDarkMode: (Boolean) -> Unit,
+    downloadProvider: DownloadProvider,
+    onDownloadProviderChange: (DownloadProvider) -> Unit,
     onOpenClearData: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -148,29 +150,61 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Row(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        AppThemeMode.entries.forEach { mode ->
-                            val isSelected = themeMode == mode
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { onThemeModeChange(mode) },
-                                label = {
-                                    Text(
-                                        text = when (mode) {
-                                            AppThemeMode.SYSTEM -> "System"
-                                            AppThemeMode.LIGHT -> "Light"
-                                            AppThemeMode.DARK -> "Dark"
-                                            AppThemeMode.AMOLED -> "AMOLED"
-                                        },
-                                        fontSize = 12.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf(AppThemeMode.SYSTEM, AppThemeMode.LIGHT).forEach { mode ->
+                                val isSelected = themeMode == mode
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { onThemeModeChange(mode) },
+                                    shape = RoundedCornerShape(10.dp),
+                                    label = {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = if (mode == AppThemeMode.SYSTEM) "System Default" else "Light Theme",
+                                                fontSize = 12.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf(AppThemeMode.DARK, AppThemeMode.AMOLED).forEach { mode ->
+                                val isSelected = themeMode == mode
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { onThemeModeChange(mode) },
+                                    shape = RoundedCornerShape(10.dp),
+                                    label = {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = if (mode == AppThemeMode.DARK) "Dark Theme" else "AMOLED Black",
+                                                fontSize = 12.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
 
@@ -318,6 +352,66 @@ fun SettingsScreen(
                 }
             }
 
+            // Section: DOWNLOADS & EXTERNAL TOOLS
+            item(key = "downloads_section") {
+                GlassySettingsCard(
+                    title = "DOWNLOADS & EXTERNAL TOOLS",
+                    icon = Icons.Default.Download
+                ) {
+                    Text(
+                        text = "Download Provider",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Choose whether to download files using the built-in manager or open your installed external download manager (1DM, ADM, IDM, Aria2, etc.)",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    DownloadProvider.entries.forEach { provider ->
+                        val isSelected = downloadProvider == provider
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { onDownloadProviderChange(provider) }
+                                .padding(vertical = 2.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = { onDownloadProviderChange(provider) }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = provider.displayName,
+                                        fontSize = 14.sp,
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = provider.description,
+                                        fontSize = 11.5.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Section: PRIVACY & SECURITY
             item(key = "privacy_section") {
                 GlassySettingsCard(
@@ -389,26 +483,32 @@ fun SettingsScreen(
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        HttpsMode.entries.forEach { mode ->
+                        listOf(
+                            HttpsMode.PREFER_HTTPS to "Prefer HTTPS",
+                            HttpsMode.HTTPS_ONLY to "HTTPS Only",
+                            HttpsMode.NORMAL to "Standard"
+                        ).forEach { (mode, label) ->
                             val isSelected = httpsMode == mode
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { onHttpsModeChange(mode) },
+                                shape = RoundedCornerShape(10.dp),
                                 label = {
-                                    Text(
-                                        text = when (mode) {
-                                            HttpsMode.PREFER_HTTPS -> "Prefer"
-                                            HttpsMode.HTTPS_ONLY -> "Only"
-                                            HttpsMode.NORMAL -> "Standard"
-                                        },
-                                        fontSize = 12.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
                                 },
                                 modifier = Modifier.weight(1f)
                             )
@@ -416,7 +516,7 @@ fun SettingsScreen(
                     }
 
                     HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 14.dp),
+                        modifier = Modifier.padding(vertical = 12.dp),
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                     )
 

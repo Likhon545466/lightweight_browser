@@ -31,19 +31,24 @@ fun BrowserBottomBar(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 3.dp,
+        tonalElevation = 6.dp,
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.navigationBars)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                thickness = 1.dp
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
             // Back Button
             IconButton(
                 onClick = onGoBack,
@@ -96,12 +101,15 @@ fun BrowserBottomBar(
                     shape = RoundedCornerShape(6.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.defaultMinSize(minWidth = 24.dp, minHeight = 24.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    ) {
                         Text(
                             text = "$tabCount",
-                            fontSize = 12.sp,
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -122,4 +130,5 @@ fun BrowserBottomBar(
             }
         }
     }
+}
 }

@@ -63,3 +63,19 @@ data class SiteException(
     val isAdBlockDisabled: Boolean = true,
     val addedAt: Long = System.currentTimeMillis()
 )
+
+@Entity(tableName = "custom_shortcuts")
+data class CustomShortcut(
+    @PrimaryKey val id: String,
+    val profileId: String,
+    val title: String,
+    val url: String,
+    val position: Int = 0,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+data class TopSiteDto(
+    val url: String,
+    val title: String,
+    val visitCount: Int
+)

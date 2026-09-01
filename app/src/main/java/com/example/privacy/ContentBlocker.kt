@@ -86,8 +86,9 @@ object ContentBlocker {
     // Blocked count per tab ID
     private val tabBlockCounts = ConcurrentHashMap<String, AtomicInteger>()
     
-    // Overall session blocked items counter
-    val totalBlockedCount = AtomicInteger(0)
+    // Overall session blocked items counter (Reactive StateFlow)
+    private val _totalBlockedCount = kotlinx.coroutines.flow.MutableStateFlow(0)
+    val totalBlockedCount: kotlinx.coroutines.flow.StateFlow<Int> = _totalBlockedCount
 
     fun shouldBlock(uri: Uri, isGlobalBlockerEnabled: Boolean, isSiteWhitelisted: Boolean): Boolean {
         if (!isGlobalBlockerEnabled || isSiteWhitelisted) return false
@@ -98,7 +99,7 @@ object ContentBlocker {
         // Check host suffix match (e.g. ad.doubleclick.net endsWith doubleclick.net)
         for (blockedHost in blockedHostSuffixes) {
             if (host == blockedHost || host.endsWith(".$blockedHost")) {
-                totalBlockedCount.incrementAndGet()
+                _totalBlockedCount.value += 1
                 return true
             }
         }
@@ -107,7 +108,7 @@ object ContentBlocker {
         val lowerPath = pathAndQuery.lowercase()
         for (kw in blockedPathKeywords) {
             if (lowerPath.contains(kw)) {
-                totalBlockedCount.incrementAndGet()
+                _totalBlockedCount.value += 1
                 return true
             }
         }

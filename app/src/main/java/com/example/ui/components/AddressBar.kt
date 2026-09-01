@@ -11,6 +11,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -81,7 +82,7 @@ fun AddressBar(
 
     Surface(
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 3.dp,
+        tonalElevation = 5.dp,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -111,10 +112,12 @@ fun AddressBar(
 
                 Spacer(modifier = Modifier.width(6.dp))
 
-                // Address / Search Bar Input Field
+                // Address / Search Bar Input Field with depth
                 Surface(
                     shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
+                    shadowElevation = 1.dp,
                     modifier = Modifier
                         .weight(1f)
                         .height(44.dp)
@@ -172,6 +175,15 @@ fun AddressBar(
                         }
 
                         // Text Field
+                        val submitNavigation = {
+                            val textToSubmit = inputText.trim()
+                            if (textToSubmit.isNotBlank()) {
+                                isEditing = false
+                                focusManager.clearFocus(force = true)
+                                onNavigate(textToSubmit)
+                            }
+                        }
+
                         BasicTextField(
                             value = inputText,
                             onValueChange = { inputText = it },
@@ -181,12 +193,13 @@ fun AddressBar(
                                 fontSize = 14.sp
                             ),
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                            keyboardActions = KeyboardActions(onGo = {
-                                isEditing = false
-                                focusManager.clearFocus(force = true)
-                                onNavigate(inputText)
-                            }),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(
+                                onSearch = { submitNavigation() },
+                                onGo = { submitNavigation() },
+                                onDone = { submitNavigation() },
+                                onSend = { submitNavigation() }
+                            ),
                             decorationBox = { innerTextField ->
                                 if (inputText.isEmpty() && !isEditing) {
                                     Text(
@@ -208,25 +221,41 @@ fun AddressBar(
                                         if (inputText.isBlank() && activeTab?.url?.isNotBlank() == true) {
                                             inputText = activeTab.url
                                         }
-                                    } else {
-                                        inputText = activeTab?.url ?: ""
                                     }
                                 }
                                 .testTag("address_input")
                         )
 
-                        // Clear Button or Reload / Stop
-                        if (isEditing && inputText.isNotEmpty()) {
-                            IconButton(
-                                onClick = { inputText = "" },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Clear input",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(16.dp)
-                                )
+                        // Clear Button and Navigate/Go Action
+                        if (isEditing) {
+                            if (inputText.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { inputText = "" },
+                                    modifier = Modifier.size(26.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear input",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(2.dp))
+                                IconButton(
+                                    onClick = { submitNavigation() },
+                                    modifier = Modifier
+                                        .size(30.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                                        .testTag("address_go_button")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = "Navigate to URL",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
                         } else if (activeTab?.isLoading == true) {
                             IconButton(
@@ -256,62 +285,67 @@ fun AddressBar(
                     }
                 }
 
-                Spacer(modifier = Modifier.width(6.dp))
+                if (!isEditing) {
+                    Spacer(modifier = Modifier.width(4.dp))
 
-                // Bookmark Icon Button
-                if (activeTab?.url?.isNotBlank() == true) {
-                    IconButton(
-                        onClick = onToggleBookmark,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                            contentDescription = if (isBookmarked) "Bookmarked" else "Bookmark this page",
-                            tint = if (isBookmarked) Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-
-                // Tabs Counter Button
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onOpenTabs() }
-                        .padding(2.dp)
-                        .testTag("tabs_button"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = "$tabCount",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                    // Bookmark Icon Button
+                    if (activeTab?.url?.isNotBlank() == true) {
+                        IconButton(
+                            onClick = onToggleBookmark,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                                contentDescription = if (isBookmarked) "Bookmarked" else "Bookmark this page",
+                                tint = if (isBookmarked) Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
-                }
 
-                // Menu 3-dots Button
-                IconButton(
-                    onClick = onOpenMenu,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .testTag("menu_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Browser Menu",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    // Tabs Counter Button
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onOpenTabs() }
+                            .padding(2.dp)
+                            .testTag("tabs_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                            modifier = Modifier.defaultMinSize(minWidth = 24.dp, minHeight = 24.dp)
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "$tabCount",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    // Menu 3-dots Button
+                    IconButton(
+                        onClick = onOpenMenu,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .testTag("menu_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Browser Menu",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 
@@ -341,6 +375,11 @@ fun AddressBar(
                     trackColor = profileColor.copy(alpha = 0.12f)
                 )
             }
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                thickness = 1.dp
+            )
         }
     }
 }
