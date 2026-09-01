@@ -46,8 +46,9 @@ jobs:
             VERSION="${{ inputs.tag_name }}"
           fi
           mkdir -p release-assets
-          APK_NAME="Material-Privacy-Browser-${VERSION}.apk"
+          APK_NAME="Feather-Browser-${VERSION}.apk"
           cp app/build/outputs/apk/release/app-release.apk "release-assets/${APK_NAME}"
+          cp app/build/outputs/apk/release/app-release.apk "release-assets/app-release.apk"
           cd release-assets
           sha256sum "${APK_NAME}" > "${APK_NAME}.sha256"
           echo "apk_name=${APK_NAME}" >> $GITHUB_OUTPUT
