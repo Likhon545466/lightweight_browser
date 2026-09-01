@@ -151,7 +151,7 @@ fun WebViewContainer(
                         displayZoomControls = false
                         allowFileAccess = false
                         allowContentAccess = false
-                        setSupportMultipleWindows(true)
+                        setSupportMultipleWindows(false)
                         mediaPlaybackRequiresUserGesture = false
 
                         if (isDesktopMode) {
@@ -163,7 +163,7 @@ fun WebViewContainer(
                         }
 
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+                            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                         }
                     }
 
@@ -198,7 +198,7 @@ fun WebViewContainer(
                         viewModel.handleDownloadRequest(url, userAgent, contentDisposition, mimetype, contentLength)
                     }
 
-                    // Custom WebViewClient
+                    // Custom WebViewClient with Render Process Crash Protection
                     webViewClient = object : WebViewClient() {
                         override fun shouldInterceptRequest(
                             view: WebView?,
@@ -210,7 +210,7 @@ fun WebViewContainer(
 
                             if (ContentBlocker.shouldBlock(uri, isAdBlockEnabled, isWhitelisted)) {
                                 ContentBlocker.recordBlockForTab(tabId)
-                                return ContentBlocker.createEmptyResponse()
+                                return ContentBlocker.createEmptyResponse(uri)
                             }
                             return super.shouldInterceptRequest(view, request)
                         }
@@ -240,16 +240,68 @@ fun WebViewContainer(
                             )
                         }
 
+                        override fun onRenderProcessGone(
+                            view: WebView?,
+                            detail: RenderProcessGoneDetail?
+                        ): Boolean {
+                            try {
+                                (view?.parent as? ViewGroup)?.removeView(view)
+                                view?.destroy()
+                            } catch (e: Exception) { }
+                            viewModel.reload()
+                            return true
+                        }
+
                         override fun shouldOverrideUrlLoading(
                             view: WebView?,
                             request: WebResourceRequest?
                         ): Boolean {
-                            val url = request?.url?.toString() ?: return false
-                            if (url.startsWith("http://") || url.startsWith("https://")) {
+                            val uri = request?.url ?: return false
+                            return handleUrlOverride(view, uri.toString())
+                        }
+
+                        @Deprecated("Deprecated in Java")
+                        override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                            if (url.isNullOrBlank()) return false
+                            return handleUrlOverride(view, url)
+                        }
+
+                        private fun handleUrlOverride(view: WebView?, url: String): Boolean {
+                            if (url.startsWith("http://", ignoreCase = true) || 
+                                url.startsWith("https://", ignoreCase = true) ||
+                                url.startsWith("about:", ignoreCase = true) ||
+                                url.startsWith("javascript:", ignoreCase = true) ||
+                                url.startsWith("data:", ignoreCase = true) ||
+                                url.startsWith("blob:", ignoreCase = true)) {
                                 return false
                             }
+
+                            // Handle intent:// URI schemes (YouTube, Play Store, Google Maps, etc.)
+                            if (url.startsWith("intent://", ignoreCase = true)) {
+                                try {
+                                    val intent = android.content.Intent.parseUri(url, android.content.Intent.URI_INTENT_SCHEME).apply {
+                                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(intent)
+                                    return true
+                                } catch (e: Exception) {
+                                    try {
+                                        val parsedIntent = android.content.Intent.parseUri(url, android.content.Intent.URI_INTENT_SCHEME)
+                                        val fallbackUrl = parsedIntent.getStringExtra("browser_fallback_url")
+                                        if (!fallbackUrl.isNullOrBlank()) {
+                                            view?.loadUrl(fallbackUrl)
+                                            return true
+                                        }
+                                    } catch (ex: Exception) { }
+                                    return true
+                                }
+                            }
+
+                            // Handle tel:, mailto:, sms:, market:, etc.
                             try {
-                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url))
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
                                 context.startActivity(intent)
                                 return true
                             } catch (e: Exception) {
@@ -279,20 +331,6 @@ fun WebViewContainer(
                             customVideoView = null
                             customVideoCallback?.onCustomViewHidden()
                             customVideoCallback = null
-                        }
-
-                        override fun onCreateWindow(
-                            view: WebView?,
-                            isDialog: Boolean,
-                            isUserGesture: Boolean,
-                            resultMsg: Message?
-                        ): Boolean {
-                            val href = view?.hitTestResult?.extra
-                            if (!href.isNullOrBlank()) {
-                                viewModel.createNewTab(url = href)
-                                return true
-                            }
-                            return super.onCreateWindow(view, isDialog, isUserGesture, resultMsg)
                         }
                     }
 

@@ -129,16 +129,25 @@ object ContentBlocker {
     }
 
     /**
-     * Creates an empty response to cleanly drop blocked requests without network overhead.
+     * Creates an empty response to cleanly drop blocked requests without breaking DOM/JS scripts.
      */
-    fun createEmptyResponse(): WebResourceResponse {
+    fun createEmptyResponse(uri: Uri? = null): WebResourceResponse {
+        val path = uri?.path?.lowercase() ?: ""
+        val (mime, encoding, emptyContent) = when {
+            path.endsWith(".js") || path.contains("script") -> Triple("application/javascript", "UTF-8", "/* blocked */".toByteArray())
+            path.endsWith(".css") -> Triple("text/css", "UTF-8", "".toByteArray())
+            path.endsWith(".json") -> Triple("application/json", "UTF-8", "{}".toByteArray())
+            path.endsWith(".png") || path.endsWith(".gif") || path.endsWith(".jpg") || path.endsWith(".webp") -> Triple("image/png", "base64", ByteArray(0))
+            else -> Triple("text/plain", "UTF-8", ByteArray(0))
+        }
+
         return WebResourceResponse(
-            "text/plain",
-            "UTF-8",
+            mime,
+            encoding,
             200,
             "OK",
-            mapOf("Cache-Control" to "no-store"),
-            ByteArrayInputStream(ByteArray(0))
+            mapOf("Cache-Control" to "no-store", "Access-Control-Allow-Origin" to "*"),
+            ByteArrayInputStream(emptyContent)
         )
     }
 }
