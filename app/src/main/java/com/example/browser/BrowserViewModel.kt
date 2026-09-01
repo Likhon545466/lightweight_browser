@@ -474,6 +474,38 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // Callbacks from WebView
+    fun onPageStarted(url: String) {
+        if (url.isBlank() || url == "about:blank") {
+            _activeTabState.update { it?.copy(isLoading = false, progress = 0) }
+            return
+        }
+        onUrlChanged(url)
+        _activeTabState.update {
+            it?.copy(
+                isLoading = true,
+                progress = it.progress.coerceIn(15, 90)
+            )
+        }
+    }
+
+    fun onPageFinished(url: String) {
+        _activeTabState.update {
+            it?.copy(
+                isLoading = false,
+                progress = 100
+            )
+        }
+    }
+
+    fun onPageLoadError() {
+        _activeTabState.update {
+            it?.copy(
+                isLoading = false,
+                progress = 100
+            )
+        }
+    }
+
     fun onUrlChanged(url: String) {
         if (url.isBlank() || url == "about:blank") return
         val isSec = UrlUtils.isHttps(url)
@@ -525,15 +557,23 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     fun onProgressChanged(progress: Int) {
         val curState = _activeTabState.value ?: return
-        val isLoading = progress < 100
-        if (curState.progress == progress && curState.isLoading == isLoading) {
+        // If on Home or about:blank, keep loading disabled
+        if (curState.url.isBlank() || curState.url == "about:blank") {
+            if (curState.isLoading || curState.progress != 0) {
+                _activeTabState.update { it?.copy(isLoading = false, progress = 0) }
+            }
             return
         }
-        _activeTabState.update {
-            it?.copy(
-                progress = progress,
-                isLoading = isLoading
-            )
+
+        if (progress >= 100) {
+            if (curState.isLoading || curState.progress != 100) {
+                _activeTabState.update { it?.copy(isLoading = false, progress = 100) }
+            }
+        } else if (curState.isLoading) {
+            // Only update progress increment while a real page load is active
+            if (curState.progress != progress) {
+                _activeTabState.update { it?.copy(progress = progress) }
+            }
         }
     }
 

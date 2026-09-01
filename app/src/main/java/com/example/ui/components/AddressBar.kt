@@ -227,37 +227,35 @@ fun AddressBar(
                         )
 
                         // Clear Button and Navigate/Go Action
+                        val hasValidUrl = !activeTab?.url.isNullOrBlank() && activeTab?.url != "about:blank"
                         if (isEditing) {
                             if (inputText.isNotEmpty()) {
                                 IconButton(
                                     onClick = { inputText = "" },
-                                    modifier = Modifier.size(26.dp)
+                                    modifier = Modifier.size(28.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = "Clear input",
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = "Clear",
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(16.dp)
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
-                                Spacer(modifier = Modifier.width(2.dp))
+                            }
+                            if (inputText.trim().isNotEmpty()) {
                                 IconButton(
                                     onClick = { submitNavigation() },
-                                    modifier = Modifier
-                                        .size(30.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-                                        .testTag("address_go_button")
+                                    modifier = Modifier.size(28.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                        contentDescription = "Navigate to URL",
+                                        contentDescription = "Go",
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
                             }
-                        } else if (activeTab?.isLoading == true) {
+                        } else if (hasValidUrl && activeTab?.isLoading == true) {
                             IconButton(
                                 onClick = onStop,
                                 modifier = Modifier.size(28.dp)
@@ -269,7 +267,7 @@ fun AddressBar(
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
-                        } else if (activeTab?.url?.isNotBlank() == true) {
+                        } else if (hasValidUrl) {
                             IconButton(
                                 onClick = onReload,
                                 modifier = Modifier.size(28.dp)
@@ -285,11 +283,12 @@ fun AddressBar(
                     }
                 }
 
+                val hasValidUrl = !activeTab?.url.isNullOrBlank() && activeTab?.url != "about:blank"
                 if (!isEditing) {
                     Spacer(modifier = Modifier.width(4.dp))
 
                     // Bookmark Icon Button
-                    if (activeTab?.url?.isNotBlank() == true) {
+                    if (hasValidUrl) {
                         IconButton(
                             onClick = onToggleBookmark,
                             modifier = Modifier.size(36.dp)
@@ -350,7 +349,8 @@ fun AddressBar(
             }
 
             // Smooth Linear Progress Bar on Address Bar
-            val isPageLoading = activeTab?.isLoading == true && (activeTab.progress in 1..99)
+            val hasValidUrl = !activeTab?.url.isNullOrBlank() && activeTab?.url != "about:blank"
+            val isPageLoading = hasValidUrl && activeTab?.isLoading == true && (activeTab.progress in 1..99)
             val currentProgressRatio = ((activeTab?.progress ?: 0) / 100f).coerceIn(0.08f, 1f)
             val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
                 targetValue = currentProgressRatio,

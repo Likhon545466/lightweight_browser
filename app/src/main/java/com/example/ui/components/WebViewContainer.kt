@@ -218,7 +218,7 @@ fun WebViewContainer(
                         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                             super.onPageStarted(view, url, favicon)
                             url?.let {
-                                viewModel.onUrlChanged(it)
+                                viewModel.onPageStarted(it)
                             }
                             viewModel.onNavigationStateChanged(
                                 canGoBack = view?.canGoBack() ?: false,
@@ -229,7 +229,7 @@ fun WebViewContainer(
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
                             url?.let {
-                                viewModel.onUrlChanged(it)
+                                viewModel.onPageFinished(it)
                             }
                             view?.title?.let {
                                 viewModel.onTitleChanged(it)
@@ -238,6 +238,17 @@ fun WebViewContainer(
                                 canGoBack = view?.canGoBack() ?: false,
                                 canGoForward = view?.canGoForward() ?: false
                             )
+                        }
+
+                        override fun onReceivedError(
+                            view: WebView?,
+                            request: WebResourceRequest?,
+                            error: WebResourceError?
+                        ) {
+                            super.onReceivedError(view, request, error)
+                            if (request?.isForMainFrame == true) {
+                                viewModel.onPageLoadError()
+                            }
                         }
 
                         override fun onRenderProcessGone(
