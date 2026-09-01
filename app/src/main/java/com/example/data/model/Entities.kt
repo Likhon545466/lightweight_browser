@@ -74,6 +74,14 @@ data class CustomShortcut(
     val createdAt: Long = System.currentTimeMillis()
 )
 
+@Entity(tableName = "dismissed_shortcuts")
+data class DismissedShortcut(
+    @PrimaryKey val id: String,
+    val profileId: String,
+    val url: String,
+    val dismissedAt: Long = System.currentTimeMillis()
+)
+
 data class TopSiteDto(
     val url: String,
     val title: String,

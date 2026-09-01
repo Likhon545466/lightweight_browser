@@ -54,6 +54,16 @@ class BrowserRepository(private val database: AppDatabase) {
         database.shortcutDao().deleteShortcutById(id)
     }
 
+    fun getDismissedShortcuts(profileId: String): Flow<List<String>> =
+        database.dismissedShortcutDao().getDismissedUrlsForProfile(profileId)
+
+    suspend fun dismissShortcut(profileId: String, url: String) = withContext(Dispatchers.IO) {
+        val id = "dismissed_${profileId}_${url.hashCode()}"
+        database.dismissedShortcutDao().insertDismissedShortcut(
+            DismissedShortcut(id = id, profileId = profileId, url = url)
+        )
+    }
+
     suspend fun initializeDefaultShortcutsIfNeeded(profileId: String) = withContext(Dispatchers.IO) {
         // Pre-populate standard useful quick shortcuts if empty
         val shortcuts = listOf(

@@ -144,3 +144,18 @@ interface PrivacyDao {
     @Query("DELETE FROM site_adblock_exceptions")
     suspend fun clearAllExceptions()
 }
+
+@Dao
+interface DismissedShortcutDao {
+    @Query("SELECT url FROM dismissed_shortcuts WHERE profileId = :profileId")
+    fun getDismissedUrlsForProfile(profileId: String): Flow<List<String>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDismissedShortcut(shortcut: DismissedShortcut)
+
+    @Query("DELETE FROM dismissed_shortcuts WHERE profileId = :profileId AND url = :url")
+    suspend fun deleteDismissedShortcut(profileId: String, url: String)
+
+    @Query("DELETE FROM dismissed_shortcuts WHERE profileId = :profileId")
+    suspend fun clearDismissedShortcutsForProfile(profileId: String)
+}
