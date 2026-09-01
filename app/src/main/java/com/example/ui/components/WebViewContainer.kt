@@ -68,9 +68,6 @@ fun WebViewContainer(
     var customVideoView by remember { mutableStateOf<View?>(null) }
     var customVideoCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
 
-    val activeTabState by viewModel.activeTabState.collectAsStateWithLifecycle()
-    val isTabLoading = activeTabState?.isLoading == true && (activeTabState?.progress ?: 0) < 75
-
     // Handle incoming actions from ViewModel
     LaunchedEffect(tabId) {
         actions.collect { action ->
@@ -338,121 +335,6 @@ fun WebViewContainer(
                 factory = { customVideoView!! },
                 modifier = Modifier.fillMaxSize()
             )
-        }
-
-        // Fluid & Beautiful Loading Screen (Replaces black flash)
-        AnimatedVisibility(
-            visible = isTabLoading,
-            enter = fadeIn(animationSpec = tween(120, easing = FastOutSlowInEasing)),
-            exit = fadeOut(animationSpec = tween(160, easing = FastOutSlowInEasing))
-        ) {
-            val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-            val pulseScale by infiniteTransition.animateFloat(
-                initialValue = 0.95f,
-                targetValue = 1.05f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(650, easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "pulseScale"
-            )
-
-            val displayDomain = remember(activeTabState?.url) {
-                val u = activeTabState?.url ?: initialUrl
-                if (u.isNotBlank()) UrlUtils.extractDomain(u) else "Connecting"
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(32.dp)
-                ) {
-                    // Pulsing Glow Badge
-                    Box(
-                        modifier = Modifier
-                            .scale(pulseScale)
-                            .size(72.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.radialGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
-                                        Color.Transparent
-                                    )
-                                )
-                            )
-                            .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Language,
-                            contentDescription = "Loading",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    // Domain Pill
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp,
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                        )
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = displayDomain,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Progress Bar
-                    val currentProgress = (activeTabState?.progress ?: 15) / 100f
-                    val animatedProgress by animateFloatAsState(
-                        targetValue = currentProgress.coerceIn(0.1f, 1f),
-                        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing),
-                        label = "progress"
-                    )
-
-                    LinearProgressIndicator(
-                        progress = { animatedProgress },
-                        modifier = Modifier
-                            .width(160.dp)
-                            .height(3.dp)
-                            .clip(RoundedCornerShape(2.dp)),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                }
-            }
         }
     }
 }

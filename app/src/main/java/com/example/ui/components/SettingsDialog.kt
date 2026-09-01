@@ -1,17 +1,21 @@
 package com.example.ui.components
 
-import android.content.Context
 import android.os.Build
 import android.webkit.WebView
+import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -19,19 +23,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.example.browser.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsDialog(
+fun SettingsScreen(
     searchEngine: SearchEngine,
     onSearchEngineChange: (SearchEngine) -> Unit,
     themeMode: AppThemeMode,
@@ -53,8 +57,6 @@ fun SettingsDialog(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val scrollState = rememberScrollState()
-    val modalBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val webViewInfo = remember {
         try {
@@ -77,49 +79,62 @@ fun SettingsDialog(
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = modalBottomSheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
-        modifier = modifier.fillMaxHeight(0.9f)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 20.dp)
-                .verticalScroll(scrollState)
-        ) {
-            // Header
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "Browser Settings",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Section: APPEARANCE & THEME
-            SettingsSectionHeader(title = "APPEARANCE & THEME")
-
+    Scaffold(
+        topBar = {
             Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                modifier = Modifier.fillMaxWidth()
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                tonalElevation = 4.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.statusBars)
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 10.dp)
+                    ) {
+                        IconButton(onClick = onDismiss) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back to Browser",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Settings",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                    )
+                }
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+        modifier = modifier.fillMaxSize()
+    ) { innerPadding ->
+        LazyColumn(
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = innerPadding.calculateTopPadding() + 16.dp,
+                bottom = innerPadding.calculateBottomPadding() + 32.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Section: APPEARANCE & THEME
+            item(key = "appearance_section") {
+                GlassySettingsCard(
+                    title = "APPEARANCE & THEME",
+                    icon = Icons.Default.Palette
+                ) {
                     Text(
                         text = "Theme Mode",
                         fontSize = 14.sp,
@@ -127,8 +142,8 @@ fun SettingsDialog(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Choose between Light, Dark, or AMOLED true black",
-                        fontSize = 11.5.sp,
+                        text = "Choose between Light, Dark, or AMOLED true pitch black",
+                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(10.dp))
@@ -162,7 +177,7 @@ fun SettingsDialog(
                     if (supportsMaterialYou) {
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 12.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                         )
 
                         Row(
@@ -178,7 +193,7 @@ fun SettingsDialog(
                                 )
                                 Text(
                                     text = "Extracts accent tones from system wallpaper",
-                                    fontSize = 11.sp,
+                                    fontSize = 11.5.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -192,7 +207,7 @@ fun SettingsDialog(
                     if (supportsForceDark) {
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 12.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                         )
 
                         Row(
@@ -208,7 +223,7 @@ fun SettingsDialog(
                                 )
                                 Text(
                                     text = "Applies dark styling to supported websites",
-                                    fontSize = 11.sp,
+                                    fontSize = 11.5.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -221,24 +236,24 @@ fun SettingsDialog(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // Section: NEW TAB PAGE STYLE
-            SettingsSectionHeader(title = "NEW TAB PAGE")
-
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+            // Section: NEW TAB PAGE
+            item(key = "new_tab_section") {
+                GlassySettingsCard(
+                    title = "NEW TAB PAGE",
+                    icon = Icons.Default.Tab
+                ) {
                     Text(
                         text = "Layout Style",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Customize the look and density of the home tab",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -248,7 +263,7 @@ fun SettingsDialog(
                             FilterChip(
                                 selected = newTabStyle == style,
                                 onClick = { onNewTabStyleChange(style) },
-                                label = { Text(style.displayName) },
+                                label = { Text(style.displayName, fontSize = 12.sp) },
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -256,17 +271,12 @@ fun SettingsDialog(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // Section: GENERAL / SEARCH
-            SettingsSectionHeader(title = "SEARCH & GENERAL")
-
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+            // Section: SEARCH ENGINE
+            item(key = "search_section") {
+                GlassySettingsCard(
+                    title = "SEARCH & GENERAL",
+                    icon = Icons.Default.Search
+                ) {
                     Text(
                         text = "Default Search Engine",
                         fontSize = 14.sp,
@@ -275,40 +285,46 @@ fun SettingsDialog(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     SearchEngine.entries.forEach { engine ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                        val isSelected = searchEngine == engine
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
                                 .clickable { onSearchEngineChange(engine) }
-                                .padding(vertical = 4.dp)
+                                .padding(vertical = 2.dp)
                         ) {
-                            RadioButton(
-                                selected = searchEngine == engine,
-                                onClick = { onSearchEngineChange(engine) }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = engine.displayName,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = { onSearchEngineChange(engine) }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = engine.displayName,
+                                    fontSize = 14.sp,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
-
             // Section: PRIVACY & SECURITY
-            SettingsSectionHeader(title = "PRIVACY & SECURITY")
-
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    // Ad Block Toggle
+            item(key = "privacy_section") {
+                GlassySettingsCard(
+                    title = "PRIVACY & SECURITY",
+                    icon = Icons.Default.Shield
+                ) {
+                    // Ad & Tracker Blocker
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
@@ -321,8 +337,8 @@ fun SettingsDialog(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Inbuilt rule engine blocks ad networks & tracking beacons",
-                                fontSize = 11.sp,
+                                text = "Native rule engine intercepts ads, tracking beacons & telemetry",
+                                fontSize = 11.5.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -333,11 +349,11 @@ fun SettingsDialog(
                     }
 
                     HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 10.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                     )
 
-                    // Third-party cookies
+                    // 3rd-Party Cookies
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
@@ -350,8 +366,8 @@ fun SettingsDialog(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Prevents cross-site tracking",
-                                fontSize = 11.sp,
+                                text = "Prevents cross-site tracking and profiling",
+                                fontSize = 11.5.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -362,11 +378,11 @@ fun SettingsDialog(
                     }
 
                     HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 10.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                     )
 
-                    // HTTPS Mode
+                    // HTTPS Enforcement
                     Text(
                         text = "HTTPS Enforcement",
                         fontSize = 14.sp,
@@ -390,7 +406,8 @@ fun SettingsDialog(
                                             HttpsMode.HTTPS_ONLY -> "Only"
                                             HttpsMode.NORMAL -> "Standard"
                                         },
-                                        fontSize = 12.sp
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     )
                                 },
                                 modifier = Modifier.weight(1f)
@@ -399,8 +416,8 @@ fun SettingsDialog(
                     }
 
                     HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                        modifier = Modifier.padding(vertical = 14.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                     )
 
                     // Clear data button
@@ -409,7 +426,8 @@ fun SettingsDialog(
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.error
                         ),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
@@ -418,64 +436,105 @@ fun SettingsDialog(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Clear Browsing Data & Cache")
+                        Text("Clear Browsing Data & Cache", fontWeight = FontWeight.Medium)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // Section: ABOUT & DIAGNOSTICS
-            SettingsSectionHeader(title = "ABOUT & ENGINE")
-
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+            // Section: ABOUT & ENGINE
+            item(key = "about_section") {
+                GlassySettingsCard(
+                    title = "ABOUT & ENGINE",
+                    icon = Icons.Default.Info
+                ) {
                     Text(
-                        text = "Material Design Privacy Browser",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        text = "Material Privacy Browser",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Version 1.2 • Inbuilt Adblock Engine • Multi-Profile",
+                        text = "Version 1.0.1 • Jetpack Compose M3 • Inbuilt Adblock Engine",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = "Engine Info:",
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = webViewInfo,
-                        fontSize = 11.sp,
+                        fontSize = 11.5.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(28.dp))
         }
     }
 }
 
+/**
+ * Premium Glassmorphic Card Container with frosted styling and subtle light-reflecting gradient borders.
+ */
 @Composable
-private fun SettingsSectionHeader(title: String) {
-    Text(
-        text = title,
-        fontSize = 11.sp,
-        fontWeight = FontWeight.Bold,
-        letterSpacing = 1.sp,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(bottom = 6.dp, start = 4.dp)
-    )
+private fun GlassySettingsCard(
+    title: String,
+    icon: ImageVector,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(13.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = title,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        Surface(
+            shape = RoundedCornerShape(18.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+            border = BorderStroke(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.12f)
+                    )
+                )
+            ),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                content = content
+            )
+        }
+    }
 }
 
 @Composable
@@ -491,7 +550,7 @@ fun ClearBrowsingDataDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Clear Browsing Data") },
+        title = { Text("Clear Browsing Data", fontWeight = FontWeight.Bold) },
         text = {
             Column {
                 Text(
@@ -565,4 +624,3 @@ fun ClearBrowsingDataDialog(
         }
     )
 }
-

@@ -36,6 +36,7 @@ fun BrowserMenuSheet(
     onOpenPrivacyShield: () -> Unit,
     onOpenClearData: () -> Unit,
     onOpenSettings: () -> Unit,
+    onExitBrowser: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -176,6 +177,21 @@ fun BrowserMenuSheet(
                 onClick = {
                     onDismiss()
                     onOpenSettings()
+                }
+            )
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 4.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+            )
+
+            MenuItemRow(
+                icon = Icons.Default.ExitToApp,
+                title = "Exit Browser",
+                tint = MaterialTheme.colorScheme.error,
+                onClick = {
+                    onDismiss()
+                    onExitBrowser()
                 }
             )
 

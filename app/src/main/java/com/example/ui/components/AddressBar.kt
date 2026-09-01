@@ -297,17 +297,30 @@ fun AddressBar(
                 }
             }
 
-            // Linear Progress Bar
+            // Smooth Linear Progress Bar on Address Bar
+            val isPageLoading = activeTab?.isLoading == true && (activeTab.progress in 1..99)
+            val currentProgressRatio = ((activeTab?.progress ?: 0) / 100f).coerceIn(0.08f, 1f)
+            val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = currentProgressRatio,
+                animationSpec = androidx.compose.animation.core.tween(
+                    durationMillis = 180,
+                    easing = androidx.compose.animation.core.FastOutSlowInEasing
+                ),
+                label = "urlLoadingProgress"
+            )
+
             AnimatedVisibility(
-                visible = activeTab?.isLoading == true && (activeTab.progress in 1..99)
+                visible = isPageLoading,
+                enter = fadeIn(animationSpec = androidx.compose.animation.core.tween(100)),
+                exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(220))
             ) {
                 LinearProgressIndicator(
-                    progress = { (activeTab?.progress ?: 0) / 100f },
+                    progress = { animatedProgress },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(2.5.dp),
+                        .height(3.dp),
                     color = profileColor,
-                    trackColor = Color.Transparent
+                    trackColor = profileColor.copy(alpha = 0.12f)
                 )
             }
         }
